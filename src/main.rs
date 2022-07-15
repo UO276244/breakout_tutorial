@@ -1,17 +1,41 @@
 use macroquad::prelude::*;
 
 //This is a vector containing the size of players bar, Width = 150 and height = 40
-const PLAYER_BAR_SIZE: Vec2 = const_vec2!([150f32 , 40f32]);
+const PLAYER_BAR_SIZE: Vec2 = const_vec2!([150f32 , 32f32]);
 
 //Speed of player's bar
 const PLAYER_SPEED : f32 = 750f32;
 
+//Blocks to destroy sizes
+const BLOCK_SIZE : Vec2 = const_vec2!([80f32 , 32f32]);
 
 
 #[macroquad::main("breakout")]
 async fn main() {
 
     let mut player = Player::new();
+    let mut blocks : Vec<Block> = Vec::new();
+
+    let (width_num_of_blocks, height_num_of_blocks) = (6,6);
+
+    let padding = 5f32; //Separation between blocks
+    let total_block_size = BLOCK_SIZE + vec2(padding,padding);
+    //Upper left corner of the array of blocks
+    //Lots of maths: widthOfScreen - (numOfBlocks * itsSize), this is the empty part of the screen, divide it by 2, so we
+    //center the array of blocks.
+    let starting_blocks_point = vec2((screen_width() - (total_block_size.x * width_num_of_blocks as f32)) * 0.5f32, 50f32);
+
+
+    //Fill matrix of blocks
+    for i in 0..width_num_of_blocks * height_num_of_blocks{
+        //x position of the block: 0,1,2,3,4,5,0,1,2,3,4,5....
+        let block_x = (i % width_num_of_blocks) as f32 * total_block_size.x;
+
+        let block_y = (i / width_num_of_blocks) as f32 *total_block_size.y; 
+
+        //Push a new block with the calculated coordinates
+        blocks.push(Block::new(starting_blocks_point + vec2(block_x,block_y)));
+    }
 
     loop{
 
@@ -20,6 +44,10 @@ async fn main() {
         clear_background(WHITE);
         
         player.draw();
+
+        for block in blocks.iter() {
+            block.draw();
+        }
 
         next_frame().await;
 
@@ -78,6 +106,37 @@ impl Player {
         }
 
     }
+}
+
+
+struct Block {
+    rectangle : Rect
+}
+
+impl Block {
+
+    pub fn new(pos: Vec2) -> Self {
+
+        Self{
+            rectangle: Rect::new(
+                pos.x,
+                pos.y, 
+                BLOCK_SIZE.x,
+                BLOCK_SIZE.y)
+        }
+
+    }
+
+
+    pub fn draw(&self) {
+        draw_rectangle(
+            self.rectangle.x, 
+            self.rectangle.y, 
+            self.rectangle.w,
+            self.rectangle.h, 
+            BLACK)
+    }
+
 }
 
 
