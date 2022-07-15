@@ -210,13 +210,13 @@ impl Ball{
         }
 
         if self.square.x > screen_width() - self.square.w {
-            println!("Vel x: {}" , self.velocity.x);
+           
             
             self.velocity.x = -1f32;
         }
 
         if self.square.y < 0f32{
-            println!("Vel y: {}" , self.velocity.x);
+            
             self.velocity.y = 1f32;
         }
     }
