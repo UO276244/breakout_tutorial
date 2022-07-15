@@ -52,9 +52,26 @@ async fn main() {
 
         player.update(get_frame_time());
 
+       
+
         for ball in balls.iter_mut(){
+
             ball.update(get_frame_time());
+
+            //Collision between ball and player
+            resolve_collision(&mut ball.square, &mut ball.velocity, &mut player.rectangle);
+
+            //Collision between ball and block
+            for block in blocks.iter_mut() {
+                if resolve_collision(&mut ball.square, &mut ball.velocity, &block.rectangle) {
+                    block.lives -= 1;
+                }
+            }
+
         }
+
+        //Retain function, if lambda expression is true, the element remains in the list, if not, its removed.
+        blocks.retain(|block| block.lives >0);
 
         clear_background(WHITE);
         
@@ -129,7 +146,8 @@ impl Player {
 
 
 struct Block {
-    rectangle : Rect
+    rectangle : Rect,
+    lives: i32,
 }
 
 impl Block {
@@ -141,7 +159,8 @@ impl Block {
                 pos.x,
                 pos.y, 
                 BLOCK_SIZE.x,
-                BLOCK_SIZE.y)
+                BLOCK_SIZE.y),
+            lives : 1,
         }
 
     }
@@ -178,23 +197,39 @@ impl Ball{
         draw_rectangle(self.square.x, self.square.y, self.square.w, self.square.h, RED)
     }
 
+    
 
     pub fn update(&mut self , dt : f32){
         self.square.x += self.velocity.x * dt * BALL_SPEED;
         self.square.y += self.velocity.y * dt * BALL_SPEED;
 
         if self.square.x < 0f32 {
+        
+            
             self.velocity.x = 1f32;
         }
 
-        if self.square.x < screen_width() - self.square.w {
+        if self.square.x > screen_width() - self.square.w {
+            println!("Vel x: {}" , self.velocity.x);
+            
             self.velocity.x = -1f32;
         }
 
         if self.square.y < 0f32{
+            println!("Vel y: {}" , self.velocity.x);
             self.velocity.y = 1f32;
         }
     }
 }
 
 
+fn resolve_collision(a: &mut Rect, vel: &mut Vec2, b: &Rect) -> bool {
+
+    if let Some(_intersection) = a.intersect(*b){
+        vel.y *= -1f32;
+        return true;
+    }else{
+        return false;
+    }
+
+}
