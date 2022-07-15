@@ -9,12 +9,16 @@ const PLAYER_SPEED : f32 = 750f32;
 //Blocks to destroy sizes
 const BLOCK_SIZE : Vec2 = const_vec2!([80f32 , 32f32]);
 
+const BALL_SPEED :f32 = 400f32;
+const BALL_SIZE : f32 = 50f32;
 
 #[macroquad::main("breakout")]
 async fn main() {
 
     let mut player = Player::new();
     let mut blocks : Vec<Block> = Vec::new();
+    let mut balls : Vec<Ball> = Vec::new();
+
 
     let (width_num_of_blocks, height_num_of_blocks) = (6,6);
 
@@ -37,9 +41,20 @@ async fn main() {
         blocks.push(Block::new(starting_blocks_point + vec2(block_x,block_y)));
     }
 
+
+    balls.push(Ball::new(vec2(screen_width() * 0.5f32, screen_height()*0.5f32)));
+
     loop{
 
+        if is_key_pressed(KeyCode::Space){
+            balls.push(Ball::new(vec2(screen_width() * 0.5f32, screen_height()*0.5f32)));
+        }
+
         player.update(get_frame_time());
+
+        for ball in balls.iter_mut(){
+            ball.update(get_frame_time());
+        }
 
         clear_background(WHITE);
         
@@ -47,6 +62,10 @@ async fn main() {
 
         for block in blocks.iter() {
             block.draw();
+        }
+
+        for ball in balls.iter() {
+            ball.draw();
         }
 
         next_frame().await;
@@ -139,5 +158,43 @@ impl Block {
 
 }
 
+
+pub struct Ball{
+    square: Rect,
+    velocity: Vec2,
+}
+
+impl Ball{
+
+    pub fn new(pos: Vec2) -> Self {
+        Self{
+            square: Rect::new(pos.x,pos.y, BALL_SIZE,BALL_SIZE),
+            velocity : vec2(rand::gen_range(-1f32,1f32) , 1f32).normalize()
+        }
+    }
+
+
+    pub fn draw(&self){
+        draw_rectangle(self.square.x, self.square.y, self.square.w, self.square.h, RED)
+    }
+
+
+    pub fn update(&mut self , dt : f32){
+        self.square.x += self.velocity.x * dt * BALL_SPEED;
+        self.square.y += self.velocity.y * dt * BALL_SPEED;
+
+        if self.square.x < 0f32 {
+            self.velocity.x = 1f32;
+        }
+
+        if self.square.x < screen_width() - self.square.w {
+            self.velocity.x = -1f32;
+        }
+
+        if self.square.y < 0f32{
+            self.velocity.y = 1f32;
+        }
+    }
+}
 
 
