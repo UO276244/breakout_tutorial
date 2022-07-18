@@ -47,8 +47,17 @@ fn init_blocks(blocks: &mut Vec<Block>){
         let block_y = (i / width_num_of_blocks) as f32 *total_block_size.y; 
 
         //Push a new block with the calculated coordinates
-        blocks.push(Block::new(starting_blocks_point + vec2(block_x,block_y)));
+        blocks.push(Block::new(starting_blocks_point + vec2(block_x,block_y), BlockType::Regular));
     }
+
+    //Random Special blocks:
+    for _ in 0..3{
+
+        let rand_index = rand::gen_range(0, blocks.len());
+        blocks[rand_index].block_type = BlockType::SpawnBallOnDeath;
+
+    }
+   
 
 }
 
@@ -67,6 +76,15 @@ fn reset_game (
         init_blocks(blocks);
 
     
+
+}
+
+//This is to allow something == BlockType::.....
+#[derive(PartialEq)]
+pub enum BlockType {
+
+    Regular,
+    SpawnBallOnDeath,
 
 }
 
@@ -112,15 +130,11 @@ async fn main() {
             },
             GameState::Game => {
 
-
-                                
-                        if is_key_pressed(KeyCode::Space){
-                            balls.push(Ball::new(vec2(screen_width() * 0.5f32, screen_height()*0.5f32)));
-                        }
-
                         player.update(get_frame_time());
 
                     
+                        
+                        let mut spawn_after_special_block_destroyed = vec![];
 
                         for ball in balls.iter_mut(){
 
@@ -135,6 +149,13 @@ async fn main() {
                                     block.lives -= 1;
                                     if block.lives <= 0{
                                         score += 10;
+
+                                        if block.block_type == BlockType::SpawnBallOnDeath {
+                                                //A ball appears
+                                                spawn_after_special_block_destroyed.
+                                                push(Ball::new(ball.square.point()));
+                                        }
+
                                     }
                                     
                                 }
@@ -142,14 +163,29 @@ async fn main() {
 
                         }
 
+                        //Iterate the spawn_after_special_block_destroyed to add temporary added balls to actual balls vector
+                        //This is done this way to prevent us from adding balls to the vector while we are iterating through the 
+                        //vector itself.
+
+                        for ball in spawn_after_special_block_destroyed .into_iter(){
+                            //Using "into_iter" instead of "iter": we clear the vector while iterating, so its empty for next use
+
+                            balls.push(ball);
+
+                        }
+
+
                         //Remove balls that fall from the screen
                         let balls_len = balls.len();
-                        let was_last_ball = balls_len ==1;
                         balls.retain(|ball| ball.square.y < screen_height());
                         let removed_balls = balls_len - balls.len();
 
-                        if removed_balls > 0 && was_last_ball{
+                        if removed_balls > 0 && balls.is_empty(){
                             player_lives -= 1;
+                            
+                            //When a live is lost, spaw a ball in front of player
+                            balls.push(Ball::new(player.rectangle.point() +
+                                 vec2(player.rectangle.w * 0.5f32 - BALL_SIZE*0.5f32, -50f32)));
 
                             if player_lives <= 0 {
                                 game_state = GameState::Lost;
@@ -305,11 +341,12 @@ impl Player {
 struct Block {
     rectangle : Rect,
     lives: i32,
+    block_type: BlockType,
 }
 
 impl Block {
 
-    pub fn new(pos: Vec2) -> Self {
+    pub fn new(pos: Vec2, block_type: BlockType) -> Self {
 
         Self{
             rectangle: Rect::new(
@@ -318,6 +355,7 @@ impl Block {
                 BLOCK_SIZE.x,
                 BLOCK_SIZE.y),
             lives : 2,
+            block_type,
         }
 
     }
@@ -325,10 +363,20 @@ impl Block {
 
     pub fn draw(&self) {
 
-        let color = match self.lives {
-            2 => RED,
-            _ => ORANGE,
+        let color = match self.block_type {
+            BlockType::Regular => {
+
+                match self.lives {
+                    2 => RED,
+                    _ => ORANGE,
+                }
+
+            },
+            BlockType::SpawnBallOnDeath => {GREEN},
+
         };
+
+   
 
         draw_rectangle(
             self.rectangle.x, 
