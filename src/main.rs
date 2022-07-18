@@ -15,6 +15,10 @@ const BALL_SIZE : f32 = 50f32;
 #[macroquad::main("breakout")]
 async fn main() {
 
+    let font = load_ttf_font("res/Roboto-Medium.ttf").await.unwrap();
+
+    let mut score = 0;
+
     let mut player = Player::new();
     let mut blocks : Vec<Block> = Vec::new();
     let mut balls : Vec<Ball> = Vec::new();
@@ -65,6 +69,7 @@ async fn main() {
             for block in blocks.iter_mut() {
                 if resolve_collision(&mut ball.square, &mut ball.velocity, &block.rectangle) {
                     block.lives -= 1;
+                    score += 10;
                 }
             }
 
@@ -84,6 +89,17 @@ async fn main() {
         for ball in balls.iter() {
             ball.draw();
         }
+
+
+        let score_text = format!("score: {}", score);
+        let score_text_dim = measure_text(&score_text,  Some(font), 20u16, 1.0);
+
+        draw_text_ex(
+            &format!("score: {}", score), 
+            screen_width()*0.5f32 - score_text_dim.width*0.5f32 ,
+            40.0,
+            TextParams{font, font_size: 20u16, color:BLACK, ..Default::default()}
+        );
 
         next_frame().await;
 
@@ -160,19 +176,25 @@ impl Block {
                 pos.y, 
                 BLOCK_SIZE.x,
                 BLOCK_SIZE.y),
-            lives : 1,
+            lives : 2,
         }
 
     }
 
 
     pub fn draw(&self) {
+
+        let color = match self.lives {
+            2 => RED,
+            _ => ORANGE,
+        };
+
         draw_rectangle(
             self.rectangle.x, 
             self.rectangle.y, 
             self.rectangle.w,
             self.rectangle.h, 
-            BLACK)
+            color)
     }
 
 }
@@ -225,9 +247,34 @@ impl Ball{
 
 fn resolve_collision(a: &mut Rect, vel: &mut Vec2, b: &Rect) -> bool {
 
-    if let Some(_intersection) = a.intersect(*b){
-        vel.y *= -1f32;
+    if let Some(intersection) = a.intersect(*b){
+        
+        let a_center = a.point() + a.size() * 0.5f32;
+        let b_center = b.point() + b.size() * 0.5f32;
+
+        let to = b_center - a_center;
+        let to_signum = to.signum();
+
+        match intersection.w > intersection.h {
+
+            true => {
+           
+
+                //width is higher than the height, rebound ball in Y axis
+                a.y -= to_signum.y * intersection.h;
+                vel.y = -to_signum.y * vel.y.abs();
+
+            }
+        false=> {
+
+                //rebound on X axis
+                a.x -= to_signum.x * intersection.w;
+                vel.x = -to_signum.x * vel.x.abs();
+        
+        }
+    }
         return true;
+
     }else{
         return false;
     }
